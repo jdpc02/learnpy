@@ -55,8 +55,23 @@ mydict1 = {
 # mydictval1 = mydict1.values()
 # print(mydictval1)
 
-print(mydict1)
-print(mydict1.items())
-mytup1 = tuple(mydict1.items())
-print(mytup1)
-print(dict(mytup1))
+# print(mydict1)
+# print(mydict1.items())
+# mytup1 = tuple(mydict1.items())
+# print(mytup1)
+# print(dict(mytup1))
+
+mydict2 = {
+    "somethingelse": "what do you mena",
+    "chompchompchomp": "watch out its a biter",
+    "call_me": "you sure?"
+}
+
+# print(mydict1)
+# print(mydict2)
+# print(mydict2.update(mydict1))
+# print(mydict2)
+
+mydict3 = mydict1.copy()
+mydict3.update(mydict2)
+print(mydict3)
