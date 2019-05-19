@@ -18,3 +18,5 @@ dist/
 Lib/
 Include/
 Scripts/
+
+pyvenv.cfg
