@@ -10,7 +10,11 @@ instance/
 htmlcov/
 
 dist/
-build/
+.vagrant/
 *.egg-info/
 
 .vscode/
+
+Lib/
+Include/
+Scripts/
