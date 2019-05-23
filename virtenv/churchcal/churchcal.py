@@ -5,6 +5,7 @@
 __author__ = 'dev'
 
 import re
+import datetime as dt
 import pymongo as mydb
 
 #  Global Vars
@@ -34,36 +35,57 @@ def initenv(envset):
                    {"1": ["1900"]},
                    {"4": ["1900"]},
                    {"5": ["1700"]}]
-        thedb = envset['churchcal']
-        thecfg = thedb['cfgdb']
+        thedb = envset.churchcal
+        thecfg = thedb.cfgdb
         thecfg.insert_many(cfgpost)
 
-def readrec(readdate, readname, readdb):
+def getcfg(cfgfdb):
+    """ Get the configuration """
+    theres = None
+    dbs = cfgfdb.churchcal
+    colls = dbs.list_collection_names()
+    if "cfgdb" in colls:
+        thecoll = dbs.cfgdb
+        theres = thecoll.find()
+    return theres
+
+def runquery(querydate, querydb):
+    """ Run the query on the DB"""
+    dbs = querydb.churchcal
+    colls = dbs.list_collection_names()
+    theres = None
+    if "dcoll" in colls:
+        thecoll = dbs.dcoll
+        thequery = {querydate: {"$regex": "\\S*"}}
+        theres = thecoll.find(thequery)
+    return theres
+
+def readrec(readdate, readdb):
     """ Read a record (date) """
-    dbs = readdb.list_database_names()
-    if "dcoll" in dbs:
-        thedb = readdb['churchcal']
-        thedb.dcoll.find({readdate})
-        while True:
-            thedb.dcoll.next()
+    return runquery(readdate, readdb)
+
+def postfnd(fnddate, fnddb):
+    """ Validate post """
+    postfndres = runquery(fnddate, fnddb)
+    if postfndres.count != 0:
         return True
     else:
         return False
 
-def postvalid():
-    """ Validate post """
-    return True
-
 def writerec(writedate, writename, writedb):
     """ Write a record (date) """
-    print("{0} {1}".format(writedate, writename))
-    dbs = writedb.list_database_names()
-    if "dcoll" in dbs:
-        print('something')
+    thewkday = dt.datetime(writedate).weekday()
+    dbs = writedb.churchcal
+    colls = dbs.list_collection_names()
+    if "dcoll" in colls:
+        if postfnd(writedate, writedb):
+            print('Appending {0} for {1}'.format(writename, writedate))
+        else:
+            print('Writing record {1} for {0}'.format(writedate, writename))
     else:
+        print('Writing initial record {0} for collection'.format(writedate))
         post = {writedate: writename}
-        thedb = writedb['churchcal']
-        postcoll = thedb['dcoll']
+        postcoll = dbs.dcoll
         postcoll.insert_one(post)
 
 def datevalid(inpvar):
@@ -85,8 +107,8 @@ if __name__ == '__main__':
     initenv(bck)
     ccdate = inpdate()
     ccname = input("Name: ")
-    if readrec(ccdate, ccname, bck):
-        print("Record {0} already exists on {1}".format(ccname, ccdate))
+    if postfnd(ccdate, bck):
+        print("Record found for {1}".format(ccdate))
     # else:
     #     writerec(ccdate, ccname, bck)
     ccclose(bck)
