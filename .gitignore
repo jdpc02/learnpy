@@ -19,4 +19,4 @@ Lib/
 Include/
 Scripts/
 
-pyvenv.cfg
+pyvenv*.cfg
