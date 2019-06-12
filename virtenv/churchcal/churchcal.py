@@ -156,10 +156,7 @@ def readrec(readdate, readdb):
 def postfnd(fnddate, fnddb):
     """ Validate post """
     postfndres = runquery(fnddate, fnddb)
-    if postfndres.count != 0:
-        return True
-    else:
-        return False
+    return bool(postfndres.count != 0)
 
 def writerec(writedate, writename, writedb):
     """ Write a record (date) """
