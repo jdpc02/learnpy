@@ -99,14 +99,14 @@ def initenv(envset):
         thecfg = thedb.cfgdb
         thecfg.insert_many(cfgpost)
 
-def getcfg(cfgfdb, cfgdate):
-    """ Get the configuration """
+def fromcfg(cfgdate, cfgfdb):
+    """ Get the entry from the config collection """
     theres = None
     dbs = cfgfdb.churchcal
     colls = dbs.list_collection_names()
     if "cfgdb" in colls:
         thecoll = dbs.cfgdb
-        thewkday = dt.datetime(cfgdate).weekday()
+        thewkday = dt.datetime.strftime(cfgdate, "%w")
         theres = thecoll.find_one({"weekday": thewkday}, {"hours": 1, "_id": 0})
     return theres
 
@@ -114,48 +114,108 @@ def runquery(querydate, querydb):
     """ Run the query on the DB"""
     dbs = querydb.churchcal
     colls = dbs.list_collection_names()
-    tmpdate = dt.datetime.strptime(querydate, "%m/%d/Y")
     theres = None
     if "dcoll" in colls:
         thecoll = dbs.dcoll
-        thequery = {'datestamp': tmpdate}
+        thequery = {'datestamp': querydate}
         theres = thecoll.find(thequery)
     return theres
 
-def readrec(readdate, readdb):
-    """ Read a record (date) """
-    return runquery(readdate, readdb)
+def fromdcoll(fddate, fddb):
+    """ Get the entry from the dcoll collection """
+    return runquery(fddate, fddb)
 
-def postfnd(fnddate, fnddb):
+def fnddcoll(fnddate, fnddb):
     """ Validate post """
-    postfndres = runquery(fnddate, fnddb)
-    return bool(postfndres.count != 0)
+    thebool = True
+    theres = runquery(fnddate, fnddb)
+    try:
+        thebool = bool(theres.count() == 1)
+    except AttributeError:
+        thebool = False
+    return thebool
+
+def listhours(listdict):
+    """ Specify available hours """
+    return listdict['hours'].keys()
+
+def availslots(availdict, availhour):
+    """ Number of available slots """
+    thenum = 0
+    for thename in availdict['hours'][availhour].keys():
+        if availdict['hours'][availhour][thename] == "":
+            thenum += 1
+    return thenum
+
+def getrec(grdate, grdb):
+    """ Grab record from config or DB """
+    if not fnddcoll(grdate, grdb):
+        thecfg = fromcfg(grdate, grdb)
+    else:
+        thecfg = fromdcoll(grdate, grdb)
+    return thecfg
+
+def spechours(specdate, specdb):
+    """ List Available Hours """
+    thei = 1
+    thenumslots = 0
+    thechoice = 0
+    thedict = {}
+    thecfg = None
+    thehours = None
+
+    thecfg = getrec(specdate, specdb)
+    if thecfg is not None:
+        thehours = listhours(thecfg)
+    if thehours is not None:
+        for thehour in thehours:
+            thenumslots = availslots(thecfg, thehour)
+            if thenumslots == 0:
+                continue
+            print(thei + ") " + thehour + " (" + thenumslots + ")")
+            thedict[thei] = thehour
+            thei += 1
+        if thei > 1:
+            while True:
+                try:
+                    thechoice = int(input("Which Mass? "))
+                except ValueError:
+                    print("Please enter the number corresponding to the hour")
+                else:
+                    break
+            if thei > thechoice >= 1:
+                return thedict[thechoice]
+    return None
+
+def setspot(ssdict, sshour, ssname):
+    """ Add name to record """
+    for thename in ssdict['hours'][sshour].keys():
+        if ssdict['hours'][sshour][thename] == "":
+            ssdict['hours'][sshour][thename] = ssname
+    return ssdict
 
 def writerec(writedate, writename, writedb):
-    """ Write a record (date) """
+    """ Write the record """
     dbs = writedb.churchcal
+    postcoll = dbs.dcoll
+    thecfg = getrec(writedate, writedb)
+    if thecfg is not None:
+        thehour = spechours(writedate, writedb)
+        if thehour is not None:
+            print('Adding {0} to {1}'.format(writename, writedate))
+            thecfg = setspot(thecfg, thehour, writename)
+
     colls = dbs.list_collection_names()
-    thecfg = getcfg(writedb, writedate)
     if "dcoll" in colls:
-        if postfnd(writedate, writedb):
-            print('Appending {0} for {1}'.format(writename, writedate))
+        if fnddcoll(writedate, writedb):
+            print('Updating {1} for {0}'.format(writename, writedate))
+            # postcoll.update
         else:
             print('Writing record {1} for {0}'.format(writedate, writename))
     else:
-        if thecfg is not None:
-            print('Writing initial record {0} for collection dcoll'.format(writedate))
-            thecfg['datestamp'] = dt.datetime.strptime(writedate, "%m/%d/Y")
-            for myhour in thecfg['hours'].keys():
-                # if myhour == writehour:
-                for mynames in thecfg['hours'][myhour].keys():
-                    if thecfg['hours'][myhour][mynames] == "":
-                        print('Writing {0} at {1}'.format(writename, myhour))
-                        break
-            postcoll = dbs.dcoll
-            postcoll.insert_one(thecfg)
-        else:
-            print("Unable to write record {0}\n".format(writedate))
-            print("Is {0} a valid date?".format(writedate))
+        print('Writing initial record {0} for collection dcoll'.format(writedate))
+        thecfg['datestamp'] = writedate
+        postcoll.insert_one(thecfg)
 
 def datevalid(inpvar):
     """ Validate input """
@@ -168,7 +228,12 @@ def inpdate():
     while True:
         thedate = input("Date [m/d/yyyy]: ")
         if datevalid(thedate):
+            thedate = dt.datetime.strptime(thedate, "%m/%d/%Y")
             return thedate
+
+def outputrec():
+    """ Print the contents of a dcoll record """
+
 
 if __name__ == '__main__':
     print('Run main function')
@@ -181,7 +246,8 @@ if __name__ == '__main__':
     initenv(bck)
     ccdate = inpdate()
     ccname = input("Name: ")
-    if postfnd(ccdate, bck):
+    cchour = spechours(ccdate, bck)
+    if fnddcoll(ccdate, bck):
         print("Record found for {1}".format(ccdate))
     # else:
     #     writerec(ccdate, ccname, bck)
