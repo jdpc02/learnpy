@@ -127,7 +127,6 @@ def fromdcoll(fddate, fddb):
 
 def fnddcoll(fnddate, fnddb):
     """ Validate post """
-    thebool = True
     theres = runquery(fnddate, fnddb)
     try:
         thebool = bool(theres.count() == 1)
@@ -149,6 +148,7 @@ def availslots(availdict, availhour):
 
 def getrec(grdate, grdb):
     """ Grab record from config or DB """
+    thecfg = None
     if not fnddcoll(grdate, grdb):
         thecfg = fromcfg(grdate, grdb)
     else:
@@ -198,24 +198,26 @@ def writerec(writedate, writename, writedb):
     """ Write the record """
     dbs = writedb.churchcal
     postcoll = dbs.dcoll
+
     thecfg = getrec(writedate, writedb)
     if thecfg is not None:
         thehour = spechours(writedate, writedb)
         if thehour is not None:
-            print('Adding {0} to {1}'.format(writename, writedate))
+            print('Configuring record {1} for {0}'.format(writename, writedate))
             thecfg = setspot(thecfg, thehour, writename)
-
-    colls = dbs.list_collection_names()
-    if "dcoll" in colls:
-        if fnddcoll(writedate, writedb):
-            print('Updating {1} for {0}'.format(writename, writedate))
-            # postcoll.update
-        else:
-            print('Writing record {1} for {0}'.format(writedate, writename))
     else:
-        print('Writing initial record {0} for collection dcoll'.format(writedate))
+        return False
+
+    if fnddcoll(writedate, writedb):
+        print('Updating {1} with {0} at {2}'.format(writename, writedate, thehour))
+        theqry = {'datestamp': writedate}
+        postcoll.replace_one(theqry, thecfg)
+    else:
+        print('Writing record {0}'.format(writedate))
         thecfg['datestamp'] = writedate
         postcoll.insert_one(thecfg)
+
+    return False
 
 def datevalid(inpvar):
     """ Validate input """
@@ -246,7 +248,6 @@ if __name__ == '__main__':
     initenv(bck)
     ccdate = inpdate()
     ccname = input("Name: ")
-    cchour = spechours(ccdate, bck)
     if fnddcoll(ccdate, bck):
         print("Record found for {1}".format(ccdate))
     # else:
