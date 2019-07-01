@@ -99,7 +99,7 @@ def initenv(envset):
         thecfg = thedb.cfgdb
         thecfg.insert_many(cfgpost)
 
-def fromcfg(cfgdate, cfgfdb):
+def getfromcfg(cfgdate, cfgfdb):
     """ Get the entry from the config collection """
     theres = None
     dbs = cfgfdb.churchcal
@@ -110,6 +110,10 @@ def fromcfg(cfgdate, cfgfdb):
         theres = thecoll.find_one({"weekday": thewkday}, {"hours": 1, "_id": 0})
     return theres
 
+def getfromdcoll(fddate, fddb):
+    """ Get the entry from the dcoll collection """
+    return runquery(fddate, fddb)
+
 def runquery(querydate, querydb):
     """ Run the query on the DB"""
     dbs = querydb.churchcal
@@ -118,12 +122,8 @@ def runquery(querydate, querydb):
     if "dcoll" in colls:
         thecoll = dbs.dcoll
         thequery = {'datestamp': querydate}
-        theres = thecoll.find(thequery)
+        theres = thecoll.find_one(thequery)
     return theres
-
-def fromdcoll(fddate, fddb):
-    """ Get the entry from the dcoll collection """
-    return runquery(fddate, fddb)
 
 def fnddcoll(fnddate, fnddb):
     """ Validate post """
@@ -138,7 +138,7 @@ def listhours(listdict):
     """ Specify available hours """
     return listdict['hours'].keys()
 
-def availslots(availdict, availhour):
+def getslots(availdict, availhour):
     """ Number of available slots """
     thenum = 0
     for thename in availdict['hours'][availhour].keys():
@@ -150,12 +150,12 @@ def getrec(grdate, grdb):
     """ Grab record from config or DB """
     thecfg = None
     if not fnddcoll(grdate, grdb):
-        thecfg = fromcfg(grdate, grdb)
+        thecfg = getfromcfg(grdate, grdb)
     else:
-        thecfg = fromdcoll(grdate, grdb)
+        thecfg = getfromdcoll(grdate, grdb)
     return thecfg
 
-def spechours(specdate, specdb):
+def gethours(specdate, specdb):
     """ List Available Hours """
     thei = 1
     thenumslots = 0
@@ -169,7 +169,7 @@ def spechours(specdate, specdb):
         thehours = listhours(thecfg)
     if thehours is not None:
         for thehour in thehours:
-            thenumslots = availslots(thecfg, thehour)
+            thenumslots = getslots(thecfg, thehour)
             if thenumslots == 0:
                 continue
             print(thei + ") " + thehour + " (" + thenumslots + ")")
@@ -201,7 +201,7 @@ def writerec(writedate, writename, writedb):
 
     thecfg = getrec(writedate, writedb)
     if thecfg is not None:
-        thehour = spechours(writedate, writedb)
+        thehour = gethours(writedate, writedb)
         if thehour is not None:
             print('Configuring record {1} for {0}'.format(writename, writedate))
             thecfg = setspot(thecfg, thehour, writename)
@@ -212,6 +212,10 @@ def writerec(writedate, writename, writedb):
         print('Updating {1} with {0} at {2}'.format(writename, writedate, thehour))
         theqry = {'datestamp': writedate}
         postcoll.replace_one(theqry, thecfg)
+        # theslot = 'Name' + getslots(thecfg, thehour)
+        # thekey = 'hours.' + thehour + '.' + theslot
+        # thevar = {"$set": {thekey: writename}
+        # postcoll.update_one(theqry, thevar)
     else:
         print('Writing record {0}'.format(writedate))
         thecfg['datestamp'] = writedate
@@ -235,7 +239,6 @@ def inpdate():
 
 def outputrec():
     """ Print the contents of a dcoll record """
-
 
 if __name__ == '__main__':
     print('Run main function')
