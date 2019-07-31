@@ -12,3 +12,9 @@ pip install virtualenv
 cd <proj_location>
 python -m venv <proj_name+env>
 ```
+
+Running a flask app:
+```
+set FLASK_APP=somescript.py
+python -m flask run
+```

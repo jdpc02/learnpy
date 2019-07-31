@@ -9,14 +9,21 @@ import os
 
 def gensdidx():
     strlist = ''
+    chkurl = True
     sdfeed = 'http://rss.slashdot.org/Slashdot/slashdotMain'
-    openurl = ur.urlopen(sdfeed)
-    mysoup = beau.BeautifulSoup(openurl, 'lxml')
-    dtmvar = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    strlist = '[' + dtmvar + ']From "' + mysoup.title.string + '":' + openurl.geturl() + '\n\n'
-    for sentry in mysoup.find_all("title"):
-        if sentry.text not in ('Slashdot', 'Search Slashdot'):
-            strlist = strlist + '* ' + sentry.text + '\n'
+    try:
+        openurl = ur.urlopen(sdfeed)
+    except:
+        chkurl = False
+    if chkurl:
+        mysoup = beau.BeautifulSoup(openurl, 'lxml')
+        dtmvar = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        strlist = '[' + dtmvar + '] From "' + mysoup.title.string + '":' + openurl.geturl() + '\n\n'
+        for sentry in mysoup.find_all("title"):
+            if sentry.text not in ('Slashdot', 'Search Slashdot'):
+                strlist = strlist + '* ' + sentry.text + '\n'
+    else:
+        strlist = 'Unable to reach ' + sdfeed + '\n'
 
     outhtml = newhtml.textile(strlist)
     thepath = pathlib.Path(__file__).parent.resolve()
