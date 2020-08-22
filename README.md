@@ -18,3 +18,11 @@ Running a flask app:
 set FLASK_APP=somescript.py
 python -m flask run
 ```
+
+
+Upgrade python modules
+```
+pip freeze > requirements.txt
+Replace == with >= in the requirements.txt file
+pip install -r requirements.txt --upgrade
+```
