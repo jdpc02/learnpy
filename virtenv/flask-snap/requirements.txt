@@ -16,5 +16,5 @@ six==1.16.0
 soupsieve==2.3.2.post1
 textile==4.0.2
 webencodings==0.5.1
-Werkzeug==2.2.2
+Werkzeug==2.2.3
 zope.interface==5.4.0
